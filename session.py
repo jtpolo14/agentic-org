@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
     # Simulate: end a previous session with a summary and note
     prev = start_session(conn)
-    log_note(conn, prev, "Jordan mentioned wanting to set up email alerts soon.")
+    log_note(conn, prev, "CEO mentioned wanting to set up email alerts soon.")
     end_session(conn, prev, "Reviewed schema design, built DB layer, seeded first task.")
 
     # Start new session and print briefing

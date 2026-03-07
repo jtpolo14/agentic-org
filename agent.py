@@ -127,7 +127,7 @@ if __name__ == "__main__":
     seed(conn)
 
     # Memory
-    set_memory(conn, "user.name", "Jordan", category="context")
+    set_memory(conn, "user.name", "CEO", category="context")
     set_memory(conn, "user.email_pref", "Prefers concise summaries, no fluff.", category="preference")
     set_memory(conn, "project.status", "Building agent memory and task system.", category="context")
 

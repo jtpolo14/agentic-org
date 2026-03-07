@@ -30,7 +30,7 @@ Ensure the agent infrastructure is running correctly.
 
 Work with the Chief of Staff to handle tasks that span both domains.
 
-- Create tasks assigned to `cos` for anything requiring Jordan's time or calendar
+- Create tasks assigned to `cos` for anything requiring CEO's time or calendar
 - Use `create_cos_task` to delegate — never reach into the CoS task queue directly
 - When receiving a task from the CoS, acknowledge and log it to memory
 
@@ -38,7 +38,7 @@ Work with the Chief of Staff to handle tasks that span both domains.
 
 ## Skill: Urgent Escalation
 
-Escalate directly to Jordan for operational emergencies.
+Escalate directly to CEO for operational emergencies.
 
 - Send a Telegram alert for any critical infrastructure failure or cost anomaly
 - Include the metric, threshold, current value, and suggested action

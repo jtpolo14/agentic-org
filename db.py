@@ -90,7 +90,7 @@ def seed(conn):
         INSERT INTO tasks (title, description, priority, effort, urgent)
         VALUES (
             'Configure email alerts',
-            'Ask Jordan for email details needed to send urgent notifications: SMTP host, port, sender address, recipient address, and credentials (or API key if using a service like SendGrid).',
+            'Ask CEO for email details needed to send urgent notifications: SMTP host, port, sender address, recipient address, and credentials (or API key if using a service like SendGrid).',
             1, 'quick', 0
         )
     """)
