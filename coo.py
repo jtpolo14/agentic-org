@@ -27,7 +27,7 @@ def seed_coo(conn):
         title="Schedule COO Telegram channel setup",
         description=(
             "The COO agent needs its own Telegram channel for operational alerts. "
-            "Please schedule 15 minutes on Jordan's calendar to: "
+            "Please schedule 15 minutes on CEO's calendar to: "
             "1) Create a new Telegram group for COO alerts, "
             "2) Add the bot to the group, "
             "3) Add COO_TELEGRAM_CHAT_ID to .env."

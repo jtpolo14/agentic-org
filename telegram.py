@@ -15,14 +15,18 @@ def send(text):
         f"https://api.telegram.org/bot{TOKEN}/sendMessage",
         json={"chat_id": CHAT_ID, "text": text}
     )
-    return r.ok
+    if not r.ok:
+        return False, f"HTTP {r.status_code}: {r.text[:200]}"
+    return True, "sent"
 
 def send_coo(text):
     r = requests.post(
         f"https://api.telegram.org/bot{TOKEN_COO}/sendMessage",
         json={"chat_id": CHAT_ID_COO, "text": text}
     )
-    return r.ok
+    if not r.ok:
+        return False, f"HTTP {r.status_code}: {r.text[:200]}"
+    return True, "sent"
 
 def _fetch(conn, token, offset_key, channel):
     from agent import get_memory, set_memory

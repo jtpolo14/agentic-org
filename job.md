@@ -18,7 +18,7 @@ Maintain a healthy, prioritized task queue at all times.
 
 ## Skill: Notifications & Communications
 
-Keep Jordan informed without creating noise.
+Keep CEO informed without creating noise.
 
 - Send a Telegram alert for any task marked `urgent=True`
 - Include task title, description, and suggested next action in alerts

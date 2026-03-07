@@ -1,4 +1,5 @@
 import os
+import requests as req
 import anthropic
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
@@ -153,7 +154,7 @@ TOOLS = [
     },
     {
         "name": "create_calendar_event",
-        "description": "Create a new calendar event. Datetimes must be ISO 8601 format in UTC (e.g. 2026-03-04T14:00:00+00:00). IMPORTANT: Always confirm the timezone with Jordan before creating an event. Ask which timezone they mean if not specified.",
+        "description": "Create a new calendar event. Datetimes must be ISO 8601 format in UTC (e.g. 2026-03-04T14:00:00+00:00). IMPORTANT: Always confirm the timezone with CEO before creating an event. Ask which timezone they mean if not specified.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -167,7 +168,7 @@ TOOLS = [
     },
     {
         "name": "update_calendar_event",
-        "description": "Update an existing calendar event by its event ID. Always confirm timezone with Jordan if changing times.",
+        "description": "Update an existing calendar event by its event ID. Always confirm timezone with CEO if changing times.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -221,8 +222,46 @@ TOOLS = [
         }
     },
     {
+        "name": "create_github_issue",
+        "description": "Create a GitHub issue on the agentic-org repo. Use for bugs, feature requests, or tracking operational issues. NEVER include API keys, tokens, chat IDs, or any secrets in the title or body.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "title":  {"type": "string", "description": "Issue title"},
+                "body":   {"type": "string", "description": "Issue description in markdown"},
+                "labels": {"type": "array", "items": {"type": "string"}, "description": "Optional labels e.g. ['bug', 'urgent']"}
+            },
+            "required": ["title"]
+        }
+    },
+    {
+        "name": "list_github_issues",
+        "description": "List open GitHub issues on the agentic-org repo.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "state": {"type": "string", "enum": ["open", "closed", "all"], "description": "Filter by state (default open)"}
+            }
+        }
+    },
+    {
+        "name": "update_github_issue",
+        "description": "Update a GitHub issue: change title/body, add a comment, or close/reopen it. NEVER include API keys, tokens, chat IDs, or any secrets.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "issue_number": {"type": "integer", "description": "The GitHub issue number"},
+                "title":   {"type": "string", "description": "New title (optional)"},
+                "body":    {"type": "string", "description": "New body (optional)"},
+                "state":   {"type": "string", "enum": ["open", "closed"], "description": "Set issue state (optional)"},
+                "comment": {"type": "string", "description": "Add a comment to the issue (optional)"}
+            },
+            "required": ["issue_number"]
+        }
+    },
+    {
         "name": "send_telegram",
-        "description": "Send a Telegram message to Jordan. Use for urgent issues or important updates.",
+        "description": "Send a Telegram message to CEO. Use for urgent issues or important updates.",
         "input_schema": {
             "type": "object",
             "properties": {"text": {"type": "string"}},
@@ -259,7 +298,6 @@ def _execute_tool(conn, name, inputs, state, telegram_fn=None):
             return "No results found."
         return "\n\n".join(f"{r['title']}\n{r['href']}\n{r['body']}" for r in results)
     if name == "get_current_time":
-        from datetime import timedelta
         utc = datetime.now(timezone.utc)
         est = utc.astimezone(timezone(timedelta(hours=-5)))
         cst = utc.astimezone(timezone(timedelta(hours=-6)))
@@ -300,7 +338,7 @@ def _execute_tool(conn, name, inputs, state, telegram_fn=None):
             return "No matching tasks found"
         return "\n".join(f"#{t['id']} [{t['status']}] {t['created_at']} - {t['title']}" for t in results)
     if name == "get_claude_cost":
-        import requests
+
         admin_key = os.getenv("ANTHROPIC_ADMIN_KEY")
         if not admin_key:
             return "ANTHROPIC_ADMIN_KEY not set in .env"
@@ -310,9 +348,9 @@ def _execute_tool(conn, name, inputs, state, telegram_fn=None):
         params = {"starting_at": start, "ending_at": end, "bucket_width": "1d"}
         headers = {"x-api-key": admin_key, "anthropic-version": "2023-06-01"}
         # Usage
-        r_usage = requests.get("https://api.anthropic.com/v1/organizations/usage_report/messages", headers=headers, params=params)
+        r_usage = req.get("https://api.anthropic.com/v1/organizations/usage_report/messages", headers=headers, params=params)
         # Cost
-        r_cost = requests.get("https://api.anthropic.com/v1/organizations/cost_report", headers=headers, params=params)
+        r_cost = req.get("https://api.anthropic.com/v1/organizations/cost_report", headers=headers, params=params)
         lines = [f"Claude API — last {days} days"]
         if r_usage.ok:
             totals = {}
@@ -335,12 +373,75 @@ def _execute_tool(conn, name, inputs, state, telegram_fn=None):
         else:
             lines.append(f"  Cost fetch failed: {r_cost.status_code}")
         return "\n".join(lines)
+    if name == "list_github_issues":
+
+        github_token = os.getenv("GITHUB_TOKEN")
+        if not github_token:
+            return "GITHUB_TOKEN not set in .env"
+        r = req.get(
+            "https://api.github.com/repos/jtpolo14/agentic-org/issues",
+            headers={"Authorization": f"token {github_token}", "Accept": "application/vnd.github+json"},
+            params={"state": inputs.get("state", "open")}
+        )
+        if not r.ok:
+            return f"GitHub API error {r.status_code}: {r.text[:200]}"
+        issues = r.json()
+        if not issues:
+            return "No issues found."
+        return "\n".join(f"#{i['number']} [{i['state']}] {i['title']} — {', '.join(l['name'] for l in i['labels'])}" for i in issues)
+    if name == "create_github_issue":
+
+        github_token = os.getenv("GITHUB_TOKEN")
+        if not github_token:
+            return "GITHUB_TOKEN not set in .env"
+        payload = {"title": inputs["title"]}
+        if inputs.get("body"):
+            payload["body"] = inputs["body"]
+        if inputs.get("labels"):
+            payload["labels"] = inputs["labels"]
+        r = req.post(
+            "https://api.github.com/repos/jtpolo14/agentic-org/issues",
+            headers={"Authorization": f"token {github_token}", "Accept": "application/vnd.github+json"},
+            json=payload
+        )
+        if r.ok:
+            issue = r.json()
+            return f"Issue #{issue['number']} created: {issue['html_url']}"
+        return f"GitHub API error {r.status_code}: {r.text[:200]}"
+    if name == "update_github_issue":
+        github_token = os.getenv("GITHUB_TOKEN")
+        if not github_token:
+            return "GITHUB_TOKEN not set in .env"
+        headers = {"Authorization": f"token {github_token}", "Accept": "application/vnd.github+json"}
+        repo = "https://api.github.com/repos/jtpolo14/agentic-org/issues"
+        num = inputs["issue_number"]
+        results = []
+        # Update title/body/state
+        patch = {}
+        if inputs.get("title"):
+            patch["title"] = inputs["title"]
+        if inputs.get("body"):
+            patch["body"] = inputs["body"]
+        if inputs.get("state"):
+            patch["state"] = inputs["state"]
+        if patch:
+            r = req.patch(f"{repo}/{num}", headers=headers, json=patch)
+            if not r.ok:
+                return f"GitHub API error {r.status_code}: {r.text[:200]}"
+            results.append(f"Issue #{num} updated")
+        # Add comment
+        if inputs.get("comment"):
+            r = req.post(f"{repo}/{num}/comments", headers=headers, json={"body": inputs["comment"]})
+            if not r.ok:
+                return f"GitHub comment error {r.status_code}: {r.text[:200]}"
+            results.append(f"Comment added to #{num}")
+        return "; ".join(results) if results else "No changes specified"
     if name == "send_telegram":
         text = inputs.get("text") or inputs.get("message") or str(inputs)
         fn = telegram_fn or telegram_send
-        ok = fn(text)
-        state["telegram_sent"] = True
-        return "Telegram sent" if ok else "Telegram failed"
+        ok, detail = fn(text)
+        state["telegram_sent"] = ok
+        return "Telegram sent" if ok else f"Telegram failed: {detail}"
     return "Unknown tool"
 
 def build_daily_summary(conn):
@@ -369,7 +470,7 @@ def build_daily_summary(conn):
         max_tokens=512,
         messages=[{
             "role": "user",
-            "content": f"You are a chief of staff agent. Write a concise end-of-day summary for Jordan based on the following activity log. Be direct, highlight what was accomplished, and note anything still open.\n\n{raw}"
+            "content": f"You are a chief of staff agent. Write a concise end-of-day summary for CEO based on the following activity log. Be direct, highlight what was accomplished, and note anything still open.\n\n{raw}"
         }]
     )
     return response.content[0].text
@@ -435,8 +536,8 @@ def run_agent(conn, task, memories, recent_messages=None, new_messages=None, pol
                 notes_callback(final)
             if has_new and not state["telegram_sent"]:
                 fn = telegram_fn or telegram_send
-                fn("Something went wrong - I was unable to process your message.")
-                print("  -> Fallback error sent to Telegram")
+                ok, detail = fn("Something went wrong - I was unable to process your message.")
+                print(f"  -> Fallback Telegram: {'sent' if ok else detail}")
             return final
 
         # Process tool calls

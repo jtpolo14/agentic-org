@@ -5,7 +5,7 @@ from datetime import datetime
 from rich.live import Live
 from rich.console import Console
 from db import get_connection, init_db, seed, next_task
-from agent import list_memories, get_memory
+from agent import list_memories
 from telegram import fetch_messages, get_recent_messages, send as telegram_send
 from llm import run_agent, build_daily_summary
 from ui import build_layout, push_cycle
@@ -21,14 +21,11 @@ def set_status(status, action):
 def cycle(conn, live):
     new = fetch_messages(conn)
 
-    keyword_mem = get_memory(conn, "agent.summary_keyword")
-    keyword = keyword_mem["content"] if keyword_mem else "summary"
-
-    if any(keyword.lower() in m["text"].lower() for m in new):
+    if any(m["text"].strip() == "/summary" for m in new):
         set_status("working", "Generating daily summary...")
         live.update(build_layout(conn, **ui_state))
         summary = build_daily_summary(conn)
-        telegram_send(summary)
+        ok, _ = telegram_send(summary)
         set_status("monitoring", "Daily summary sent to Telegram")
         return
 
