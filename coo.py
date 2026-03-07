@@ -1,18 +1,26 @@
 import time
 import signal
 import sys
-import os
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+from rich.live import Live
+from rich.console import Console
 from db import get_connection, init_db, next_task
-from agent import list_memories, get_memory, create_cos_task, set_memory
+from agent import list_memories, create_cos_task
 from telegram import send_coo, fetch_messages_coo, get_recent_messages_coo
 from llm import run_agent
+from ui import build_layout, push_cycle
 
 load_dotenv()
 
 POLL_INTERVAL = 10
 AGENT = "coo"
+console = Console()
+ui_state = {"status": "monitoring", "last_action": "Starting up..."}
+
+def set_status(status, action):
+    ui_state["status"] = status
+    ui_state["last_action"] = action
 
 def seed_coo(conn):
     existing = conn.execute(
@@ -47,19 +55,22 @@ def seed_coo(conn):
     """)
     conn.commit()
 
-def cycle(conn):
+def cycle(conn, live):
     new = fetch_messages_coo(conn)
     task = next_task(conn, agent=AGENT)
 
     if not task and not new:
-        print(f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] COO monitoring...")
+        set_status("monitoring", f"Last checked {datetime.now(timezone.utc).strftime('%H:%M:%S')} UTC")
+        live.update(build_layout(conn, **ui_state, agent=AGENT))
         return
 
     if new:
-        print(f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] COO {len(new)} new message(s)")
+        set_status("message", f"{len(new)} new Telegram message(s)")
+        live.update(build_layout(conn, **ui_state, agent=AGENT))
 
     if task:
-        print(f"[{datetime.now(timezone.utc).strftime('%H:%M:%S')}] COO working: #{task['id']} {task['title']}")
+        set_status("working", f"#{task['id']} [{task['effort']}] {task['title']}")
+        live.update(build_layout(conn, **ui_state, agent=AGENT))
         if task["recurs"]:
             conn.execute("""
                 UPDATE tasks
@@ -81,6 +92,9 @@ def cycle(conn):
         system_files=("START_HERE_COO.md", "job_coo.md"),
         telegram_fn=send_coo
     )
+    action = task["title"] if task else f"{len(new)} message(s)"
+    push_cycle(action, tool_log, agent=AGENT)
+    set_status("monitoring", f"Done: {action}")
 
 def main():
     conn = get_connection()
@@ -88,17 +102,17 @@ def main():
     seed_coo(conn)
 
     def shutdown(sig, frame):
-        print("\nCOO stopped.")
         conn.close()
+        console.print("\n[dim]COO stopped.[/dim]")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    print(f"COO agent running. Polling every {POLL_INTERVAL}s. Ctrl+C to stop.")
-    while True:
-        cycle(conn)
-        time.sleep(POLL_INTERVAL)
+    with Live(build_layout(conn, **ui_state, agent=AGENT), refresh_per_second=2, screen=True) as live:
+        while True:
+            cycle(conn, live)
+            time.sleep(POLL_INTERVAL)
 
 if __name__ == "__main__":
     main()

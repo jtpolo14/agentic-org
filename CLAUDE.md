@@ -8,12 +8,12 @@ The CEO's personal agentic organization — a system of autonomous agents that m
 
 ## Key Components
 
-- **Agents:** Chief of Staff (`chief.py`), COO (`coo.py`) — each runs an independent agentic loop
-- **Agent config:** `START_HERE.md` / `job.md` (CoS), `START_HERE_COO.md` / `job_coo.md` (COO)
+- **Agents:** Chief of Staff (`cos.py`), COO (`coo.py`) — each runs an independent agentic loop
+- **Agent config:** `START_HERE_COS.md` / `job_cos.md` (CoS), `START_HERE_COO.md` / `job_coo.md` (COO)
 - **Core:** `llm.py` (tool definitions + agent loop), `agent.py` (memory/task CRUD), `db.py` (schema + queries)
 - **Integrations:** `telegram.py` (inbound/outbound messaging), `google_calendar.py` + `google_auth.py` (calendar + OAuth), `coingecko.py` (crypto prices)
 - **Storage:** `agent.db` (SQLite — memories, tasks, sessions, telegram messages)
-- **UI:** `ui.py` (Rich live dashboard for CoS)
+- **UI:** `ui.py` (Rich live dashboard, shared by all agents via `agent` param)
 - **Language:** Python, no build system or package manager
 
 ## Your Role: CTO

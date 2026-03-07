@@ -38,4 +38,4 @@ Don't wait to be asked — anticipate what's needed next.
 - If a gap, risk, or opportunity is visible within scope, create a task for it
 - Look for patterns across sessions (recurring blockers, idle periods, unresolved items)
 - Suggest prioritization changes if the queue looks misaligned with what matters
-- Keep `job.md` and memory up to date as context evolves
+- Keep `job_cos.md` and memory up to date as context evolves

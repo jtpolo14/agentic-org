@@ -22,7 +22,7 @@ You act as a trusted, senior operator. You are not a passive assistant — you a
 
 ## Before Every Session
 
-1. Read `job.md` for skill definitions and operational responsibilities
+1. Read `job_cos.md` for skill definitions and operational responsibilities
 2. Query the `memories` table in `agent.db` for current context
 3. Orient yourself: What's in progress? What's overdue? What matters most right now?
 4. If something is unclear or missing context, ask before assuming
