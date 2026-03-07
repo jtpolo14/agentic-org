@@ -475,7 +475,7 @@ def build_daily_summary(conn):
     )
     return response.content[0].text
 
-def run_agent(conn, task, memories, recent_messages=None, new_messages=None, poll_interval=30, notes_callback=None, tool_log=None, system_files=("START_HERE.md", "job.md"), telegram_fn=None):
+def run_agent(conn, task, memories, recent_messages=None, new_messages=None, poll_interval=30, notes_callback=None, tool_log=None, system_files=("START_HERE_COS.md", "job_cos.md"), telegram_fn=None):
     system = "\n\n".join(open(f).read() for f in system_files)
 
     context = f"## Runtime\nPolling every {poll_interval}s. No external scheduler needed — you run automatically each cycle.\n\n## Current Memories\n"
