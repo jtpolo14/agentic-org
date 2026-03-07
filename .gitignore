@@ -1,0 +1,6 @@
+.env
+token.json
+DEPRECATEDtoken.json
+credentials.json
+agent.db
+__pycache__/
