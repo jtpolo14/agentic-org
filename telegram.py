@@ -10,23 +10,24 @@ CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 TOKEN_COO = os.getenv("TELEGRAM_TOKEN_COO")
 CHAT_ID_COO = os.getenv("TELEGRAM_CHAT_ID_COO")
 
-def send(text):
-    r = requests.post(
-        f"https://api.telegram.org/bot{TOKEN}/sendMessage",
-        json={"chat_id": CHAT_ID, "text": text}
-    )
+def _send(token, chat_id, text):
+    try:
+        r = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text},
+            timeout=10
+        )
+    except requests.RequestException as e:
+        return False, str(e)
     if not r.ok:
         return False, f"HTTP {r.status_code}: {r.text[:200]}"
     return True, "sent"
 
+def send(text):
+    return _send(TOKEN, CHAT_ID, text)
+
 def send_coo(text):
-    r = requests.post(
-        f"https://api.telegram.org/bot{TOKEN_COO}/sendMessage",
-        json={"chat_id": CHAT_ID_COO, "text": text}
-    )
-    if not r.ok:
-        return False, f"HTTP {r.status_code}: {r.text[:200]}"
-    return True, "sent"
+    return _send(TOKEN_COO, CHAT_ID_COO, text)
 
 def _fetch(conn, token, offset_key, channel):
     from agent import get_memory, set_memory
@@ -41,7 +42,10 @@ def _fetch(conn, token, offset_key, channel):
     if offset:
         params["offset"] = offset
 
-    r = requests.get(f"https://api.telegram.org/bot{token}/getUpdates", params=params)
+    try:
+        r = requests.get(f"https://api.telegram.org/bot{token}/getUpdates", params=params, timeout=15)
+    except requests.RequestException:
+        return []
     if not r.ok:
         return []
 
